@@ -12,26 +12,28 @@ def orders_page():
     client_name = st.text_input("👤 اسم العميل (اختياري)")
     client_phone = st.text_input("📞 رقم الهاتف (اختياري)")
 
-    # 🔍 **إضافة خيار البحث عن المنتجات**
-    st.subheader("🔎 البحث عن منتج")
+    # 🔍 **اختيار المنتج من قائمة منسدلة**
+    st.subheader("📦 اختر منتجًا")
     
-    # تحويل المنتجات إلى قائمة قابلة للاختيار
     product_options = {product["name"]: product for product in data["products"]}
-    selected_product_name = st.selectbox("📦 اختر المنتج", ["اختر منتجًا"] + list(product_options.keys()))
+    selected_product_name = st.selectbox("📦 المنتج", ["اختر منتجًا"] + list(product_options.keys()))
 
     selected_products = []
 
     if selected_product_name != "اختر منتجًا":
         selected_product = product_options[selected_product_name]
-        quantity = st.number_input(f"🔢 الكمية من {selected_product['name']} (متوفر: {selected_product['stock']})",
-                                   min_value=0, max_value=selected_product["stock"], step=1)
 
-        if quantity > 0:
-            selected_products.append({
-                "name": selected_product["name"],
-                "price": selected_product["final_price"],
-                "quantity": quantity
-            })
+        # يبدأ تلقائيًا بـ 1 عند اختيار المنتج
+        quantity = st.number_input(
+            f"🔢 الكمية من {selected_product['name']} (متوفر: {selected_product['stock']})",
+            min_value=1, max_value=selected_product["stock"], step=1, value=1
+        )
+
+        selected_products.append({
+            "name": selected_product["name"],
+            "price": selected_product["final_price"],
+            "quantity": quantity
+        })
 
     # تطبيق الخصم الإضافي
     additional_discount = st.number_input("💵 خصم إضافي", min_value=0.0, step=0.01, format="%.2f")
@@ -71,18 +73,12 @@ def orders_page():
             st.success("🎉 تم إنشاء الطلب بنجاح!")
             st.rerun()
 
-    # 🔍 **إضافة خيار البحث عن الطلبات**
-    st.subheader("🔎 البحث عن طلب")
-    search_query = st.text_input("🔍 ابحث بالاسم أو رقم الهاتف")
-    
-    # عرض الطلبات السابقة
+    # عرض الطلبات السابقة (تمت إزالة البحث عن طلب)
     st.subheader("📋 الطلبات السابقة")
     if not data["orders"]:
         st.info("🚀 لا توجد طلبات بعد!")
     else:
-        filtered_orders = [order for order in data["orders"] if search_query.lower() in (order.get("client_name", "") + order.get("client_phone", "")).lower()]
-
-        for order in filtered_orders:
+        for order in data["orders"]:
             with st.expander(f"📌 طلب بتاريخ {order['timestamp']}"):
                 st.write(f"👤 العميل: {order.get('client_name', 'غير محدد')}")
                 st.write(f"📞 الهاتف: {order.get('client_phone', 'غير محدد')}")
