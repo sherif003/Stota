@@ -12,31 +12,30 @@ def orders_page():
     client_name = st.text_input("👤 اسم العميل (اختياري)")
     client_phone = st.text_input("📞 رقم الهاتف (اختياري)")
 
-    # 🔍 **اختيار المنتج من قائمة منسدلة مع إمكانية البحث**
-    st.subheader("📦 اختر منتجًا")
+    # 🔍 **اختيار المنتجات من قائمة منسدلة متعددة**
+    st.subheader("📦 اختر المنتجات")
 
-    product_names = ["اختر منتجًا"] + [product["name"] for product in data["products"]]
-    selected_product_name = st.selectbox("📦 المنتج", product_names, index=0)
+    product_names = [product["name"] for product in data["products"]]
+    selected_product_names = st.multiselect("📦 المنتجات", product_names)
 
     selected_products = {}
 
-    if selected_product_name != "اختر منتجًا":
-        selected_product = next(product for product in data["products"] if product["name"] == selected_product_name)
+    for product_name in selected_product_names:
+        product = next(p for p in data["products"] if p["name"] == product_name)
 
-        # السماح بتقليل الكمية إلى 0 لحذف المنتج من الطلب
         quantity = st.number_input(
-            f"🔢 الكمية من {selected_product['name']} (متوفر: {selected_product['stock']})",
-            min_value=0, max_value=selected_product["stock"], step=1, value=1
+            f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
+            min_value=0, max_value=product["stock"], step=1, value=1
         )
 
         if quantity > 0:
-            selected_products[selected_product["name"]] = {
-                "name": selected_product["name"],
-                "price": selected_product["final_price"],
+            selected_products[product["name"]] = {
+                "name": product["name"],
+                "price": product["final_price"],
                 "quantity": quantity
             }
-        elif selected_product["name"] in selected_products:
-            del selected_products[selected_product["name"]]  # إزالة المنتج إذا كانت الكمية 0
+        elif product["name"] in selected_products:
+            del selected_products[product["name"]]  # إزالة المنتج إذا كانت الكمية 0
 
     # تطبيق الخصم الإضافي
     additional_discount = st.number_input("💵 خصم إضافي", min_value=0.0, step=0.01, format="%.2f")
