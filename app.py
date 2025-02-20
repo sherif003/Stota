@@ -4,7 +4,7 @@ from orders import orders_page
 from reports import reports_page
 
 st.sidebar.title("Stota Store POS System")
-page = st.sidebar.radio("Select Page", ["Products", "Orders", "Reports & Cash Breakdown"])
+page = st.sidebar.radio("Select Page", [ "Orders","Products", "Reports & Cash Breakdown"])
 
 if page == "Products":
     products_page()
