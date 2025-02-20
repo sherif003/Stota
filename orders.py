@@ -12,36 +12,37 @@ def orders_page():
     client_name = st.text_input("👤 اسم العميل (اختياري)")
     client_phone = st.text_input("📞 رقم الهاتف (اختياري)")
 
-    # 🔍 **اختيار المنتج من قائمة منسدلة مع تمييز البحث**
+    # 🔍 **اختيار المنتج من قائمة منسدلة مع إمكانية البحث**
     st.subheader("📦 اختر منتجًا")
 
     product_names = ["اختر منتجًا"] + [product["name"] for product in data["products"]]
-    
-    # عند فتح القائمة، يمكن للمستخدم الكتابة مباشرة للبحث بسهولة
     selected_product_name = st.selectbox("📦 المنتج", product_names, index=0)
 
-    selected_products = []
+    selected_products = {}
 
     if selected_product_name != "اختر منتجًا":
         selected_product = next(product for product in data["products"] if product["name"] == selected_product_name)
 
-        # يبدأ تلقائيًا بـ 1 عند اختيار المنتج
+        # السماح بتقليل الكمية إلى 0 لحذف المنتج من الطلب
         quantity = st.number_input(
             f"🔢 الكمية من {selected_product['name']} (متوفر: {selected_product['stock']})",
-            min_value=1, max_value=selected_product["stock"], step=1, value=1
+            min_value=0, max_value=selected_product["stock"], step=1, value=1
         )
 
-        selected_products.append({
-            "name": selected_product["name"],
-            "price": selected_product["final_price"],
-            "quantity": quantity
-        })
+        if quantity > 0:
+            selected_products[selected_product["name"]] = {
+                "name": selected_product["name"],
+                "price": selected_product["final_price"],
+                "quantity": quantity
+            }
+        elif selected_product["name"] in selected_products:
+            del selected_products[selected_product["name"]]  # إزالة المنتج إذا كانت الكمية 0
 
     # تطبيق الخصم الإضافي
     additional_discount = st.number_input("💵 خصم إضافي", min_value=0.0, step=0.01, format="%.2f")
 
     # حساب إجمالي المبلغ
-    total_cost = sum(item["price"] * item["quantity"] for item in selected_products)
+    total_cost = sum(item["price"] * item["quantity"] for item in selected_products.values())
     final_total = max(0, total_cost - additional_discount)
 
     st.write(f"💰 **إجمالي السعر:** {total_cost:.2f} جنيه")
@@ -57,7 +58,7 @@ def orders_page():
             new_order = {
                 "client_name": client_name,
                 "client_phone": client_phone,
-                "products": selected_products,
+                "products": list(selected_products.values()),
                 "total_cost": total_cost,
                 "additional_discount": additional_discount,
                 "final_total": final_total,
@@ -66,7 +67,7 @@ def orders_page():
             data["orders"].append(new_order)
 
             # **🛑 تحديث المخزون بعد الطلب**
-            for item in selected_products:
+            for item in selected_products.values():
                 for product in data["products"]:
                     if product["name"] == item["name"]:
                         product["stock"] -= item["quantity"]  # **تحديث المخزون**
