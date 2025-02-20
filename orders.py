@@ -12,16 +12,18 @@ def orders_page():
     client_name = st.text_input("👤 اسم العميل (اختياري)")
     client_phone = st.text_input("📞 رقم الهاتف (اختياري)")
 
-    # 🔍 **اختيار المنتج من قائمة منسدلة**
+    # 🔍 **اختيار المنتج من قائمة منسدلة مع تمييز البحث**
     st.subheader("📦 اختر منتجًا")
+
+    product_names = ["اختر منتجًا"] + [product["name"] for product in data["products"]]
     
-    product_options = {product["name"]: product for product in data["products"]}
-    selected_product_name = st.selectbox("📦 المنتج", ["اختر منتجًا"] + list(product_options.keys()))
+    # عند فتح القائمة، يمكن للمستخدم الكتابة مباشرة للبحث بسهولة
+    selected_product_name = st.selectbox("📦 المنتج", product_names, index=0)
 
     selected_products = []
 
     if selected_product_name != "اختر منتجًا":
-        selected_product = product_options[selected_product_name]
+        selected_product = next(product for product in data["products"] if product["name"] == selected_product_name)
 
         # يبدأ تلقائيًا بـ 1 عند اختيار المنتج
         quantity = st.number_input(
@@ -73,7 +75,7 @@ def orders_page():
             st.success("🎉 تم إنشاء الطلب بنجاح!")
             st.rerun()
 
-    # عرض الطلبات السابقة (تمت إزالة البحث عن طلب)
+    # عرض الطلبات السابقة
     st.subheader("📋 الطلبات السابقة")
     if not data["orders"]:
         st.info("🚀 لا توجد طلبات بعد!")
