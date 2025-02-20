@@ -14,22 +14,22 @@ def orders_page():
 
     # 🔍 **إضافة خيار البحث عن المنتجات**
     st.subheader("🔎 البحث عن منتج")
-    product_search = st.text_input("🔍 ابحث باسم المنتج")
-
-    # اختيار المنتجات
-    selected_products = []
-    st.subheader("📦 المنتجات المتاحة")
     
-    # فلترة المنتجات حسب البحث
-    filtered_products = [product for product in data["products"] if product_search.lower() in product["name"].lower()] if product_search else data["products"]
+    # تحويل المنتجات إلى قائمة قابلة للاختيار
+    product_options = {product["name"]: product for product in data["products"]}
+    selected_product_name = st.selectbox("📦 اختر المنتج", ["اختر منتجًا"] + list(product_options.keys()))
 
-    for product in filtered_products:
-        quantity = st.number_input(f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
-                                   min_value=0, max_value=product["stock"], step=1, key=f"qty_{product['name']}")
+    selected_products = []
+
+    if selected_product_name != "اختر منتجًا":
+        selected_product = product_options[selected_product_name]
+        quantity = st.number_input(f"🔢 الكمية من {selected_product['name']} (متوفر: {selected_product['stock']})",
+                                   min_value=0, max_value=selected_product["stock"], step=1)
+
         if quantity > 0:
             selected_products.append({
-                "name": product["name"],
-                "price": product["final_price"],
+                "name": selected_product["name"],
+                "price": selected_product["final_price"],
                 "quantity": quantity
             })
 
