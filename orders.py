@@ -55,6 +55,7 @@ def orders_page():
                 "timestamp": timestamp
             }
 
+            # تحديث المخزون بعد إضافة الطلب
             for item in selected_products.values():
                 for product in data["products"]:
                     if product["name"] == item["name"]:
@@ -75,7 +76,7 @@ def orders_page():
                 client_name = st.text_input(f"👤 اسم العميل (طلب {i+1})", order.get("client_name", ""), key=f"name_{i}")
                 client_phone = st.text_input(f"📞 رقم الهاتف (طلب {i+1})", order.get("client_phone", ""), key=f"phone_{i}")
 
-                # استرجاع المخزون قبل التعديل
+                # استعادة الكمية الأصلية إلى المخزون قبل التعديل
                 for item in order["products"]:
                     for product in data["products"]:
                         if product["name"] == item["name"]:
@@ -132,7 +133,7 @@ def orders_page():
                                 "timestamp": order["timestamp"]
                             }
 
-                            # تحديث المخزون الصحيح
+                            # تحديث المخزون بعد التعديل
                             for product in data["products"]:
                                 product_name = product["name"]
                                 old_quantity = next((p["quantity"] for p in order["products"] if p["name"] == product_name), 0)
@@ -148,7 +149,7 @@ def orders_page():
                     confirm_delete = st.checkbox("🛑 تأكيد حذف الطلب", key=f"delete_{i}")
                     if st.button(f"🗑️ حذف الطلب", key=f"remove_{i}"):
                         if confirm_delete:
-                            # استرجاع الكميات إلى المخزون
+                            # استعادة المخزون عند الحذف (بشكل صحيح)
                             for item in order["products"]:
                                 for product in data["products"]:
                                     if product["name"] == item["name"]:
