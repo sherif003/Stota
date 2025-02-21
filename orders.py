@@ -15,14 +15,14 @@ def orders_page():
     # **تحضير بيانات الطلب**
     if selected_order == "إنشاء طلب جديد":
         order_index = None
-        client_name, client_phone, selected_products, additional_discount = "", "", {}, 0
+        client_name, client_phone, selected_products, additional_discount = "", "", {}, 0.0
     else:
         order_index = order_options.index(selected_order) - 1
         existing_order = data["orders"][order_index]
         client_name = existing_order.get("client_name", "")
         client_phone = existing_order.get("client_phone", "")
         selected_products = {item["name"]: item for item in existing_order["products"]}
-        additional_discount = existing_order.get("additional_discount", 0)
+        additional_discount = float(existing_order.get("additional_discount", 0.0))
 
         # ✅ **إعادة الكميات السابقة إلى المخزون قبل التعديل**
         for item in existing_order["products"]:
