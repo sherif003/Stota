@@ -47,7 +47,7 @@ def orders_page():
                 "timestamp": timestamp
             }
 
-            # ✅ تحديث المخزون بعد إضافة الطلب
+            # تحديث المخزون بعد إضافة الطلب
             for item in selected_products.values():
                 product = next(p for p in data["products"] if p["name"] == item["name"])
                 product["stock"] -= item["quantity"]
@@ -67,10 +67,10 @@ def orders_page():
                 client_name = st.text_input(f"👤 اسم العميل (طلب {i+1})", order["client_name"], key=f"name_{i}")
                 client_phone = st.text_input(f"📞 رقم الهاتف (طلب {i+1})", order["client_phone"], key=f"phone_{i}")
 
-                # **قبل أي تعديل، استرجاع الكميات القديمة من المخزون**
+                # **إرجاع الكميات القديمة إلى المخزون قبل أي تعديل**
                 for item in order["products"]:
                     product = next(p for p in data["products"] if p["name"] == item["name"])
-                    product["stock"] += item["quantity"]  # إرجاع الكمية القديمة فقط!
+                    product["stock"] += item["quantity"]  # استرجاع المخزون
 
                 selected_product_names = st.multiselect(
                     f"📦 المنتجات (طلب {i+1})", product_names,
@@ -81,11 +81,11 @@ def orders_page():
                 updated_products = {}
                 for product_name in selected_product_names:
                     product = next(p for p in data["products"] if p["name"] == product_name)
-                    old_quantity = next((p["quantity"] for p in order["products"] if p["name"] == product_name), 0)
+                    default_quantity = next((p["quantity"] for p in order["products"] if p["name"] == product_name), 1)
 
                     quantity = st.number_input(
                         f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
-                        min_value=1, max_value=product["stock"], step=1, value=old_quantity,
+                        min_value=1, max_value=product["stock"], step=1, value=default_quantity,
                         key=f"quantity_{i}_{product_name}"
                     )
                     updated_products[product_name] = {"name": product["name"], "price": product["final_price"], "quantity": quantity}
@@ -117,10 +117,12 @@ def orders_page():
                                 "timestamp": order["timestamp"]
                             }
 
-                            # ✅ تحديث المخزون بعد التعديلات
-                            for item in updated_products.values():
-                                product = next(p for p in data["products"] if p["name"] == item["name"])
-                                product["stock"] -= item["quantity"]  # طرح الكمية الجديدة فقط
+                            # **إعادة تحديث المخزون بعد التعديلات**
+                            for product in data["products"]:
+                                product_name = product["name"]
+                                old_quantity = next((p["quantity"] for p in order["products"] if p["name"] == product_name), 0)
+                                new_quantity = updated_products.get(product_name, {}).get("quantity", 0)
+                                product["stock"] += old_quantity - new_quantity  # استرجاع ثم خصم جديد
 
                             data["orders"][i] = updated_order
                             save_data(data)
@@ -131,10 +133,10 @@ def orders_page():
                     confirm_delete = st.checkbox("🛑 تأكيد حذف الطلب", key=f"delete_{i}", value=True)
                     if st.button(f"🗑️ حذف الطلب", key=f"remove_{i}"):
                         if confirm_delete:
-                            # ✅ استرجاع المخزون عند حذف الطلب
+                            # **استعادة المخزون عند الحذف**
                             for item in order["products"]:
                                 product = next(p for p in data["products"] if p["name"] == item["name"])
-                                product["stock"] += item["quantity"]  # فقط الكمية الأصلية
+                                product["stock"] += item["quantity"]  # إرجاع الكميات فقط مرة واحدة
 
                             del data["orders"][i]
                             save_data(data)
