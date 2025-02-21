@@ -5,7 +5,6 @@ from data_handler import load_data, save_data
 def orders_page():
     st.title("🛒 إدارة الطلبات")
 
-    # تحميل البيانات
     data = load_data()
 
     # **إضافة طلب جديد**
@@ -13,24 +12,17 @@ def orders_page():
     client_name = st.text_input("👤 اسم العميل")
     client_phone = st.text_input("📞 رقم الهاتف")
 
-    # **🔍 اختيار المنتجات**
     product_names = [product["name"] for product in data["products"]]
     selected_product_names = st.multiselect("📦 اختر المنتجات", product_names)
 
     selected_products = {}
-
     for product_name in selected_product_names:
         product = next(p for p in data["products"] if p["name"] == product_name)
         quantity = st.number_input(
             f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
-            min_value=0, max_value=product["stock"], step=1, value=1
+            min_value=1, max_value=product["stock"], step=1, value=1
         )
-        if quantity > 0:
-            selected_products[product["name"]] = {
-                "name": product["name"],
-                "price": product["final_price"],
-                "quantity": quantity
-            }
+        selected_products[product_name] = {"name": product["name"], "price": product["final_price"], "quantity": quantity}
 
     additional_discount = st.number_input("💵 خصم إضافي", min_value=0.0, step=0.01, format="%.2f")
 
@@ -57,9 +49,8 @@ def orders_page():
 
             # تحديث المخزون بعد إضافة الطلب
             for item in selected_products.values():
-                for product in data["products"]:
-                    if product["name"] == item["name"]:
-                        product["stock"] -= item["quantity"]
+                product = next(p for p in data["products"] if p["name"] == item["name"])
+                product["stock"] -= item["quantity"]
 
             data["orders"].append(new_order)
             save_data(data)
@@ -73,16 +64,14 @@ def orders_page():
     else:
         for i, order in enumerate(data["orders"]):
             with st.expander(f"📌 طلب بتاريخ {order['timestamp']}", expanded=False):
-                client_name = st.text_input(f"👤 اسم العميل (طلب {i+1})", order.get("client_name", ""), key=f"name_{i}")
-                client_phone = st.text_input(f"📞 رقم الهاتف (طلب {i+1})", order.get("client_phone", ""), key=f"phone_{i}")
+                client_name = st.text_input(f"👤 اسم العميل (طلب {i+1})", order["client_name"], key=f"name_{i}")
+                client_phone = st.text_input(f"📞 رقم الهاتف (طلب {i+1})", order["client_phone"], key=f"phone_{i}")
 
-                # استعادة الكمية الأصلية إلى المخزون قبل التعديل
+                # **إرجاع الكميات القديمة إلى المخزون قبل أي تعديل**
                 for item in order["products"]:
-                    for product in data["products"]:
-                        if product["name"] == item["name"]:
-                            product["stock"] += item["quantity"]
+                    product = next(p for p in data["products"] if p["name"] == item["name"])
+                    product["stock"] += item["quantity"]  # استرجاع المخزون
 
-                product_names = [product["name"] for product in data["products"]]
                 selected_product_names = st.multiselect(
                     f"📦 المنتجات (طلب {i+1})", product_names,
                     default=[p["name"] for p in order["products"]],
@@ -96,15 +85,10 @@ def orders_page():
 
                     quantity = st.number_input(
                         f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
-                        min_value=0, max_value=product["stock"], step=1, value=default_quantity,
+                        min_value=1, max_value=product["stock"], step=1, value=default_quantity,
                         key=f"quantity_{i}_{product_name}"
                     )
-                    if quantity > 0:
-                        updated_products[product["name"]] = {
-                            "name": product["name"],
-                            "price": product["final_price"],
-                            "quantity": quantity
-                        }
+                    updated_products[product_name] = {"name": product["name"], "price": product["final_price"], "quantity": quantity}
 
                 additional_discount = st.number_input(
                     f"💵 خصم إضافي (طلب {i+1})", min_value=0.0, step=0.01, format="%.2f",
@@ -133,12 +117,12 @@ def orders_page():
                                 "timestamp": order["timestamp"]
                             }
 
-                            # تحديث المخزون بعد التعديل
+                            # **إعادة تحديث المخزون بعد التعديلات**
                             for product in data["products"]:
                                 product_name = product["name"]
                                 old_quantity = next((p["quantity"] for p in order["products"] if p["name"] == product_name), 0)
                                 new_quantity = updated_products.get(product_name, {}).get("quantity", 0)
-                                product["stock"] += old_quantity - new_quantity
+                                product["stock"] += old_quantity - new_quantity  # استرجاع ثم خصم جديد
 
                             data["orders"][i] = updated_order
                             save_data(data)
@@ -146,14 +130,13 @@ def orders_page():
                             st.rerun()
 
                 with col2:
-                    confirm_delete = st.checkbox("🛑 تأكيد حذف الطلب", key=f"delete_{i}")
+                    confirm_delete = st.checkbox("🛑 تأكيد حذف الطلب", key=f"delete_{i}", value=True)
                     if st.button(f"🗑️ حذف الطلب", key=f"remove_{i}"):
                         if confirm_delete:
-                            # استعادة المخزون عند الحذف (بشكل صحيح)
+                            # **استعادة المخزون عند الحذف**
                             for item in order["products"]:
-                                for product in data["products"]:
-                                    if product["name"] == item["name"]:
-                                        product["stock"] += item["quantity"]
+                                product = next(p for p in data["products"] if p["name"] == item["name"])
+                                product["stock"] += item["quantity"]  # إرجاع الكميات فقط مرة واحدة
 
                             del data["orders"][i]
                             save_data(data)
