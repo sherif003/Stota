@@ -8,25 +8,31 @@ def orders_page():
     # تحميل البيانات
     data = load_data()
 
-    # **🆕 إنشاء طلب جديد أو تعديل طلب قديم**
+    # **🆕 إنشاء أو تعديل طلب**
     order_options = ["إنشاء طلب جديد"] + [f"طلب بتاريخ {order['timestamp']}" for order in data["orders"]]
     selected_order = st.selectbox("📋 اختر الطلب", order_options)
 
-    # بيانات الطلب
+    # **تحضير بيانات الطلب**
     if selected_order == "إنشاء طلب جديد":
-        order_index = None  # لإنشاء طلب جديد
+        order_index = None
         client_name, client_phone, selected_products, additional_discount = "", "", {}, 0
     else:
-        order_index = order_options.index(selected_order) - 1  # استرجاع الطلب من القائمة
+        order_index = order_options.index(selected_order) - 1
         existing_order = data["orders"][order_index]
         client_name = existing_order.get("client_name", "")
         client_phone = existing_order.get("client_phone", "")
         selected_products = {item["name"]: item for item in existing_order["products"]}
         additional_discount = existing_order.get("additional_discount", 0)
 
+        # ✅ **إعادة الكميات السابقة إلى المخزون قبل التعديل**
+        for item in existing_order["products"]:
+            for product in data["products"]:
+                if product["name"] == item["name"]:
+                    product["stock"] += item["quantity"]
+
     # **إدخال بيانات العميل**
-    client_name = st.text_input("👤 اسم العميل (اختياري)", client_name)
-    client_phone = st.text_input("📞 رقم الهاتف (اختياري)", client_phone)
+    client_name = st.text_input("👤 اسم العميل", client_name)
+    client_phone = st.text_input("📞 رقم الهاتف", client_phone)
 
     # **🔍 اختيار المنتجات**
     st.subheader("📦 اختر المنتجات")
@@ -54,19 +60,19 @@ def orders_page():
     # **تطبيق الخصم الإضافي**
     additional_discount = st.number_input("💵 خصم إضافي", min_value=0.0, step=0.01, format="%.2f", value=additional_discount)
 
-    # **حساب إجمالي المبلغ**
+    # **حساب الإجمالي**
     total_cost = sum(item["price"] * item["quantity"] for item in updated_products.values())
     final_total = max(0, total_cost - additional_discount)
 
     st.write(f"💰 **إجمالي السعر:** {total_cost:.2f} جنيه")
-    st.write(f"📉 **بعد الخصم الإضافي:** {final_total:.2f} جنيه")
+    st.write(f"📉 **بعد الخصم:** {final_total:.2f} جنيه")
 
-    # **حفظ الطلب (إضافة جديد أو تحديث قديم)**
+    # **🔄 حفظ الطلب**
     if st.button("✅ حفظ الطلب"):
         if not updated_products:
-            st.error("⚠️ الرجاء اختيار منتج واحد على الأقل!")
+            st.error("⚠️ يجب اختيار منتج واحد على الأقل!")
         else:
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") if order_index is None else existing_order["timestamp"]
 
             new_order = {
                 "client_name": client_name,
@@ -75,14 +81,14 @@ def orders_page():
                 "total_cost": total_cost,
                 "additional_discount": additional_discount,
                 "final_total": final_total,
-                "timestamp": timestamp if order_index is None else existing_order["timestamp"]
+                "timestamp": timestamp
             }
 
-            # **تحديث المخزون**
+            # ✅ **تحديث المخزون بعد التعديل**
             for product in data["products"]:
                 old_quantity = selected_products.get(product["name"], {}).get("quantity", 0)
                 new_quantity = updated_products.get(product["name"], {}).get("quantity", 0)
-                product["stock"] += old_quantity - new_quantity  # إعادة المخزون للحالة الصحيحة
+                product["stock"] += old_quantity - new_quantity
 
             if order_index is None:
                 data["orders"].append(new_order)  # إضافة طلب جديد
@@ -90,7 +96,7 @@ def orders_page():
                 data["orders"][order_index] = new_order  # تحديث الطلب الحالي
 
             save_data(data)
-            st.success("🎉 تم حفظ الطلب بنجاح!")
+            st.success("🎉 تم حفظ التعديلات بنجاح!")
             st.rerun()
 
     # **عرض الطلبات السابقة**
