@@ -99,6 +99,23 @@ def orders_page():
             st.success("🎉 تم حفظ التعديلات بنجاح!")
             st.rerun()
 
+    # **🗑️ خيار حذف الطلب**
+    if order_index is not None:
+        if st.button("❌ حذف الطلب (استرجاع المخزون)"):
+            confirm_delete = st.checkbox("✅ تأكيد حذف الطلب")
+            if confirm_delete:
+                # ✅ **إعادة الكميات إلى المخزون**
+                for item in existing_order["products"]:
+                    for product in data["products"]:
+                        if product["name"] == item["name"]:
+                            product["stock"] += item["quantity"]
+
+                # حذف الطلب
+                del data["orders"][order_index]
+                save_data(data)
+                st.success("✅ تم حذف الطلب واسترجاع المخزون!")
+                st.rerun()
+
     # **عرض الطلبات السابقة**
     st.subheader("📋 الطلبات السابقة")
     if not data["orders"]:
