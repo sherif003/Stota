@@ -8,7 +8,7 @@ def orders_page():
     # تحميل البيانات
     data = load_data()
 
-    # **🆕 إنشاء أو تعديل طلب**
+    # **🆕 اختيار الطلب**
     order_options = ["إنشاء طلب جديد"] + [f"طلب بتاريخ {order['timestamp']}" for order in data["orders"]]
     selected_order = st.selectbox("📋 اختر الطلب", order_options)
 
@@ -24,7 +24,7 @@ def orders_page():
         selected_products = {item["name"]: item for item in existing_order["products"]}
         additional_discount = float(existing_order.get("additional_discount", 0.0))
 
-        # ✅ **إعادة الكميات السابقة إلى المخزون قبل التعديل**
+        # ✅ **إعادة المخزون إلى حالته قبل التعديل أو الحذف**
         for item in existing_order["products"]:
             for product in data["products"]:
                 if product["name"] == item["name"]:
@@ -47,7 +47,7 @@ def orders_page():
 
         quantity = st.number_input(
             f"🔢 الكمية من {product['name']} (متوفر: {product['stock']})",
-            min_value=0, max_value=product["stock"] + default_quantity, step=1, value=default_quantity
+            min_value=0, max_value=product["stock"], step=1, value=default_quantity
         )
 
         if quantity > 0:
@@ -86,9 +86,10 @@ def orders_page():
 
             # ✅ **تحديث المخزون بعد التعديل**
             for product in data["products"]:
-                old_quantity = selected_products.get(product["name"], {}).get("quantity", 0)
-                new_quantity = updated_products.get(product["name"], {}).get("quantity", 0)
-                product["stock"] += old_quantity - new_quantity
+                product_name = product["name"]
+                old_quantity = selected_products.get(product_name, {}).get("quantity", 0)
+                new_quantity = updated_products.get(product_name, {}).get("quantity", 0)
+                product["stock"] += old_quantity - new_quantity  # التحديث الصحيح
 
             if order_index is None:
                 data["orders"].append(new_order)  # إضافة طلب جديد
@@ -99,10 +100,12 @@ def orders_page():
             st.success("🎉 تم حفظ التعديلات بنجاح!")
             st.rerun()
 
-    # **🗑️ خيار حذف الطلب**
+    # **🗑️ حذف الطلب (استرجاع المخزون)**
     if order_index is not None:
-        if st.button("❌ حذف الطلب (استرجاع المخزون)"):
-            confirm_delete = st.checkbox("✅ تأكيد حذف الطلب")
+        st.subheader("❌ حذف الطلب")
+        confirm_delete = st.checkbox("✅ تأكيد حذف الطلب")  # ✅ يظهر دائمًا عند تحديد طلب
+
+        if st.button("🗑️ حذف الطلب واسترجاع المخزون"):
             if confirm_delete:
                 # ✅ **إعادة الكميات إلى المخزون**
                 for item in existing_order["products"]:
@@ -115,6 +118,8 @@ def orders_page():
                 save_data(data)
                 st.success("✅ تم حذف الطلب واسترجاع المخزون!")
                 st.rerun()
+            else:
+                st.warning("⚠️ يجب تفعيل تأكيد الحذف قبل الحذف!")
 
     # **عرض الطلبات السابقة**
     st.subheader("📋 الطلبات السابقة")
