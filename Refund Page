@@ -1,0 +1,42 @@
+import streamlit as st
+from data_handler import load_data, save_data
+
+def refund_page():
+    st.title("🔄 صفحة استرجاع الطلبات")
+    
+    data = load_data()
+    
+    if not data["orders"]:
+        st.info("🚀 لا توجد طلبات لاسترجاعها!")
+        return
+    
+    st.subheader("📋 اختر طلبًا لاسترجاعه")
+    order_options = {f"طلب بتاريخ {order['timestamp']}": order for order in data["orders"]}
+    selected_order_label = st.selectbox("🔍 اختر طلبًا", list(order_options.keys()))
+    selected_order = order_options[selected_order_label]
+    
+    st.write("### 🛒 تفاصيل الطلب")
+    st.write(f"👤 العميل: {selected_order.get('client_name', 'غير محدد')}")
+    st.write(f"📞 الهاتف: {selected_order.get('client_phone', 'غير محدد')}")
+    for item in selected_order["products"]:
+        st.write(f"🛒 {item['name']} - {item['quantity']} قطعة - {item['price']} جنيه")
+    
+    st.write(f"💰 **الإجمالي:** {selected_order['total_cost']} جنيه")
+    st.write(f"📉 **بعد الخصم:** {selected_order['final_total']} جنيه")
+    
+    if st.button("🗑️ تأكيد استرجاع الطلب"):
+        # استرجاع المخزون للمنتجات
+        for item in selected_order["products"]:
+            for product in data["products"]:
+                if product["name"] == item["name"]:
+                    product["stock"] += item["quantity"]
+        
+        # إزالة الطلب من القائمة
+        data["orders"].remove(selected_order)
+        
+        save_data(data)
+        st.success("✅ تم استرجاع الطلب بنجاح!")
+        st.rerun()
+
+if __name__ == "__main__":
+    refund_page()
